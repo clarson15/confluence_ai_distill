@@ -20,10 +20,10 @@ Confluence AI Summarizer is a Python script designed to traverse a Confluence sp
     ./run.sh
     ```
     or
-    ```powershell
+    ```bash
     ./run.ps1
     ```
-3. Provide the space key from the terminal
+3. Provide the confluence space key from the terminal
 
 ### Using Python Directly
 1. Clone the repository and navigate to the project directory.
@@ -39,7 +39,7 @@ Confluence AI Summarizer is a Python script designed to traverse a Confluence sp
     ```
 
 ## Usage
-Configure the script settings (e.g., Confluence API credentials, space key) via a configuration file or environment variables as detailed in the documentation. Then, run the script to generate a summarized version of your Confluence space.
+Configure the script settings (e.g., Confluence API credentials, OpenAI credentials) via a configuration file or environment variables as detailed in the documentation. Then, run the script to generate a summarized version of your Confluence space.
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
