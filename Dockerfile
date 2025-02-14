@@ -7,5 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY run.py .
 COPY .env .
+COPY prompts/ prompts/
 
 CMD ["python", "run.py"]
