@@ -1,10 +1,9 @@
-import os
-import http.client
-import json
 from dotenv import load_dotenv
 from openai import OpenAI
+from confluence_client import ConfluenceClient
 import os
 import sys
+import json
 
 def main():
     load_dotenv()
@@ -13,7 +12,8 @@ def main():
         sys.exit(1)
     confluence_url = os.getenv("CONFLUENCE_URL")
     confluence_api_key = os.getenv("CONFLUENCE_API_KEY")
-    client = OpenAI()
+    confluence_client = ConfluenceClient(confluence_url, confluence_api_key)
+    openai_client = OpenAI()
     tools = [
         {
             "type": "function",
@@ -39,9 +39,6 @@ def main():
             }
         }
     ]
-    
-    print("CONFLUENCE_URL:", confluence_url)
-    print("CONFLUENCE_API_KEY:", confluence_api_key)
 
     spaces = []
     inputSpace = "to-fill"
@@ -50,36 +47,20 @@ def main():
         if inputSpace:
             spaces.append(inputSpace)
     print("Spaces:", spaces)
-
-    connection = http.client.HTTPSConnection(confluence_url)
-    headers = {
-        'Authorization': f'Bearer {confluence_api_key}'
-    }
-
+    
     pages = []
     for space in spaces:
-        nextPage = f'/rest/api/space/{space}/content/page'
-        while nextPage:
-            connection.request("GET", nextPage, headers=headers)
-            response = connection.getresponse()
-            data_raw = response.read()
-            data = json.loads(data_raw)
-            nextPage = data["_links"]["next"] if "_links" in data and "next" in data["_links"] else None
-            for item in data["results"]:
-                if item["type"] == "page":
-                    url = f'{item["_links"]["self"]}?expand=body.storage'.replace(f'https://{confluence_url}', '')
-                    connection.request("GET", url, headers=headers)
-                    response = connection.getresponse()
-                    data_raw = response.read()
-                    data = json.loads(data_raw)
-                    content = data["body"]["storage"]["value"]
-                    if len(content) > 100:
-                        pages.append({
-                            "title": item["title"],
-                            "content": content
-                        })
-    
+        pages += confluence_client.get_pages_in_space(space)
     print("Pages:", len(pages))
+
+    if not os.path.exists("output/confluence"):
+        os.makedirs("output/confluence")
+    for page in pages:
+        data = confluence_client.get_page_content(page[1])
+        filename = ''.join(ch for ch in page[0] if ch.isalnum())
+        with open(f'output/confluence/{filename}.txt', 'w+') as file:
+            file.write(data)
+    return
 
     prompt = ''
     with open('prompts/extract_classify.txt', 'r') as file:
@@ -111,7 +92,7 @@ def main():
             safetyCounter = 0
             
             while True:
-                completion = client.chat.completions.create(
+                completion = openai_client.chat.completions.create(
                     model = "gpt-4o-mini",
                     tools = tools,
                     messages = messages
