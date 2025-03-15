@@ -44,17 +44,17 @@ class ConfluenceClient():
         if page.startswith(self.base_url):
             self.connection.request("GET", page.removeprefix(self.base_url), headers=self.headers)
             response = self.connection.getresponse()
-            data = json.loads(response.read())
             if response.status != 200:
                 return f"Failed to get content for page {page}"
+            data = json.loads(response.read())
             pattern = r'<meta\s+[^>]*name=["\']ajs-page-id["\'][^>]*content=["\'](\d+)["\']'
             page_id = re.search(pattern, data["body"]["export_view"]["value"])
         
         self.connection.request("GET", f'/rest/api/content/{page_id}?expand=body.export_view', headers=self.headers)
         response = self.connection.getresponse()
-        data = json.loads(response.read())
         if response.status != 200:
             return f"Failed to get content for page {page_id}"
+        data = json.loads(response.read())
         content = self._markdown(data["body"]["export_view"]["value"])
         
         if self.debug:
@@ -69,14 +69,16 @@ class ConfluenceClient():
         if page.startswith(self.base_url):
             self.connection.request("GET", page.removeprefix(self.base_url), headers=self.headers)
             response = self.connection.getresponse()
-            data = response.read()
             if response.status != 200:
                 return f"Failed to get children for page {page}"
+            data = response.read()
             pattern = r'<meta\s+[^>]*name=["\']ajs-page-id["\'][^>]*content=["\'](\d+)["\']'
             page_id = re.search(pattern, data)
 
         self.connection.request("GET", f'/rest/api/content/{page_id}/child/page', headers=self.headers)
         response = self.connection.getresponse()
+        if response.status != 200:
+            return f"Failed to get children for page {page}"
         data_raw = response.read()
         data = json.loads(data_raw)
         children = []

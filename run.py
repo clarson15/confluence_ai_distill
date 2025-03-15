@@ -12,7 +12,7 @@ def main():
         sys.exit(1)
     confluence_url = os.getenv("CONFLUENCE_URL")
     confluence_api_key = os.getenv("CONFLUENCE_API_KEY")
-    confluence_client = ConfluenceClient(confluence_url, confluence_api_key, debug=True)
+    confluence_client = ConfluenceClient(confluence_url, confluence_api_key)
     openai_client = OpenAI()
     
 
