@@ -20,6 +20,7 @@ class ConfluenceClient():
             'Authorization': f'Bearer {api_key}'
         }
         self.debug = debug
+        self.pattern = r'<meta\s+[^>]*name=["\']ajs-page-id["\'][^>]*content=["\'](\d+)["\']'
         self.markdown = MarkItDown()
     
     def get_pages_in_space(self, space):
@@ -36,19 +37,24 @@ class ConfluenceClient():
                     pages.append((item["title"], item["id"]))    
         return pages
     
+    def get_page_id(self, url: str) -> str:
+        if url.startswith(self.base_url):
+            self.connection.request("GET", url.removeprefix(self.base_url), headers=self.headers)
+            response = self.connection.getresponse()
+            if response.status != 200:
+                return f"Failed to get page ID for URL {url}"
+            data = response.read()
+            page_id = re.search(self.pattern, data)
+            return page_id
+        return url
+    
     def get_page_content(self, page: str) -> str:
         if self.debug:
             print(f"Getting content for page {page}")
         page_id = page
 
         if page.startswith(self.base_url):
-            self.connection.request("GET", page.removeprefix(self.base_url), headers=self.headers)
-            response = self.connection.getresponse()
-            if response.status != 200:
-                return f"Failed to get content for page {page}"
-            data = json.loads(response.read())
-            pattern = r'<meta\s+[^>]*name=["\']ajs-page-id["\'][^>]*content=["\'](\d+)["\']'
-            page_id = re.search(pattern, data["body"]["export_view"]["value"])
+            page_id = self.get_page_id(page)
         
         self.connection.request("GET", f'/rest/api/content/{page_id}?expand=body.export_view', headers=self.headers)
         response = self.connection.getresponse()
@@ -67,13 +73,7 @@ class ConfluenceClient():
         page_id = page
 
         if page.startswith(self.base_url):
-            self.connection.request("GET", page.removeprefix(self.base_url), headers=self.headers)
-            response = self.connection.getresponse()
-            if response.status != 200:
-                return f"Failed to get children for page {page}"
-            data = response.read()
-            pattern = r'<meta\s+[^>]*name=["\']ajs-page-id["\'][^>]*content=["\'](\d+)["\']'
-            page_id = re.search(pattern, data)
+            page_id = self.get_page_id(page)
 
         self.connection.request("GET", f'/rest/api/content/{page_id}/child/page', headers=self.headers)
         response = self.connection.getresponse()

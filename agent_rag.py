@@ -1,9 +1,10 @@
+from io import TextIOWrapper
 from confluence_client import ConfluenceClient
 from openai import OpenAI
 import json
 
 class RagAgent():
-    def __init__(self, confluence_client: ConfluenceClient, openai_client: OpenAI, prompt: str, debug: bool = False):
+    def __init__(self, confluence_client: ConfluenceClient, openai_client: OpenAI, prompt: str, log_file: TextIOWrapper | None = None):
         self.confluence_client = confluence_client
         self.openai_client = openai_client
         self.tools = [
@@ -28,9 +29,9 @@ class RagAgent():
             }
         ]
         self.prompt = prompt
-        self.debug = debug
+        self.log_file = log_file
 
-    def find_info(self, prompt) -> str:
+    def find_info(self, prompt: str) -> str:
         messages = [
             {
                 "role": "developer",
@@ -41,6 +42,8 @@ class RagAgent():
                 "content": prompt
             }
         ]
+        if self.log_file:
+            self.log_file.write(f"[RAG Agent] Prompt: {prompt}\n")
         try:
             final_answer = None
             while True:
@@ -50,6 +53,8 @@ class RagAgent():
                     messages = messages
                 )
                 messages.append(completion.choices[0].message)
+                if self.log_file and completion.choices[0].message.content:
+                    self.log_file.write(f"[RAG Agent] Response: {completion.choices[0].message.content}\n")
                 if completion.choices[0].message.tool_calls:
                     final_answer = None
                     for tool_call in completion.choices[0].message.tool_calls:
@@ -73,6 +78,8 @@ class RagAgent():
                                 "tool_call_id": tool_call.id,
                                 "content": page
                             })
+                            if self.log_file:
+                                self.log_file.write(f"[RAG Agent] Looked up page {page_id}\n")
                             continue
                         messages.append({
                             "role": "tool",
@@ -82,11 +89,9 @@ class RagAgent():
                     continue
 
                 if final_answer and completion.choices[0].message.content == "Yes.":
-                    if self.debug:
-                        print(messages)
                     return final_answer
-                elif final_answer:
-                    print(completion.choices[0].message.content)
+                elif final_answer and self.log_file:
+                    self.log_file.write("[RAG Agent] Unsatisfactory final answer. Continuing search\n")
                 
                 final_answer = completion.choices[0].message.content
                 messages.append({
